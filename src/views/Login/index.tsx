@@ -2,6 +2,7 @@ import React from 'react';
 import type { FormProps } from 'antd';
 import { Button, Checkbox, Form, Input, Card } from 'antd';
 import { useNavigate } from "react-router-dom";
+import { login } from '../../api';
 
 type FieldType = {
     username?: string;
@@ -14,7 +15,12 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
 
     const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
-        navigate('/home')
+
+        login().then(data => {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("refreshToken", data.refreshToken);
+            navigate('/')
+        })
     };
 
     const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
