@@ -1,10 +1,6 @@
 import { axiosInstance } from './axiosInstance.ts';
 
 
-
-
-
-
 export const login = () => {
     return axiosInstance.post('login')
         .then(function ({data}) {
@@ -16,7 +12,7 @@ export const login = () => {
 }
 
 export const getProtectedInfo = () => {
-    return axiosInstance.get('protected')
+    return axiosInstance.get('/protected')
         .then(function ({data}) {
             return data
         })
