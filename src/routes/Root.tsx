@@ -39,8 +39,8 @@ const App: React.FC = () => {
                         minHeight: '300px',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
+                        justifyContent: 'flex-start',
+                        alignItems: 'flex-start'
                     }}>
                         <Link style={{ width: '100%', padding: 25, background: 'red', color: '#fff' }} to={`profile`}>My profile</Link>
                         <Link style={{ width: '100%', padding: 25, background: 'green', color: '#fff' }} to={`login`}>Logout</Link>
