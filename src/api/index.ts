@@ -8,7 +8,19 @@ type LoginData = {
 };
 
 export const login = (data: LoginData) => {
-    return axiosInstance.post('login', data)
+    return axiosInstance.post('login', data, {})
+        .then(function ({data}) {
+            return data
+        })
+        .catch(function (error) {
+            console.log(error);
+        });
+}
+
+export const logoutFromSystem = (refreshToken: string) => {
+    return axiosInstance.delete('logout', {
+        data: { refreshToken }
+    })
         .then(function ({data}) {
             return data
         })

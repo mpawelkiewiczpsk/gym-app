@@ -21,54 +21,74 @@ axiosInstance.interceptors.request.use(
     }
 );
 
+
 let isRefreshing = false;
-let refreshSubscribers = [];
+let failedQueue = [];
 
-function subscribeTokenRefresh(cb) {
-    refreshSubscribers.push(cb);
-}
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
 
-function onRefreshed(token) {
-    refreshSubscribers.map((cb) => cb(token));
-    refreshSubscribers = [];
-}
+    failedQueue = [];
+};
 
 axiosInstance.interceptors.response.use(
-    (response) => {
+    response => {
         return response;
     },
-    async (error) => {
-        const { config, response: { status } } = error;
-        const originalRequest = config;
+    err => {
+        const originalRequest = err.config;
 
-        if (status === 401 && !originalRequest._retry) {
-            if (!isRefreshing) {
-                isRefreshing = true;
-                try {
-                    const refreshToken = localStorage.getItem('refreshToken');
-                    const { data } = await axiosInstance.post('/refresh-token', { refreshToken: refreshToken });
-                    localStorage.setItem('accessToken', data.accessToken);
-                    localStorage.setItem('refreshToken', data.refreshToken);
-                    axiosInstance.defaults.headers.common['Authorization'] = `${data.accessToken}`;
-                    onRefreshed(data.accessToken);
-                    isRefreshing = false;
-                } catch (err) {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    window.location.href = '/login';
-                    return Promise.reject(error);
-                }
+        if (err.response.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                return new Promise(function(resolve, reject) {
+                    failedQueue.push({ resolve, reject });
+                })
+                    .then(token => {
+                        originalRequest.headers['Authorization'] = token;
+                        return axiosInstance(originalRequest);
+                    })
+                    .catch(err => {
+                        return Promise.reject(err);
+                    });
             }
 
-            return new Promise((resolve) => {
-                subscribeTokenRefresh((token) => {
-                    originalRequest.headers['Authorization'] = token;
-                    resolve(axiosInstance(originalRequest));
-                });
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            return new Promise(function(resolve, reject) {
+
+                const refreshToken = localStorage.getItem('refreshToken');
+                axiosInstance
+                    .post('/refresh-token', { refreshToken })
+                    .then(({ data }) => {
+                        localStorage.setItem('accessToken', data.accessToken);
+                        localStorage.setItem('refreshToken', data.refreshToken);
+                        axiosInstance.defaults.headers.common['Authorization'] = `${data.accessToken}`;
+                        processQueue(null, data.accessToken);
+                        resolve(axiosInstance(originalRequest));
+                    })
+                    .catch(err => {
+                        processQueue(err, null);
+
+                        reject(err);
+                    })
+                    .then(() => {
+                        isRefreshing = false;
+                    });
             });
         }
-        return Promise.reject(error);
+
+        return Promise.reject(err);
     }
 );
+
+
+
 
 
